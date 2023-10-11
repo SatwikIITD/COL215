@@ -1,0 +1,72 @@
+----------------------------------------------------------------------------------
+-- Company: 
+-- Engineer: 
+-- 
+-- Create Date: 08/01/2023 01:09:31 PM
+-- Design Name: 
+-- Module Name: Decoder - Behavioral
+-- Project Name: 
+-- Target Devices: 
+-- Tool Versions: 
+-- Description: 
+-- 
+-- Dependencies: 
+-- 
+-- Revision:
+-- Revision 0.01 - File Created
+-- Additional Comments:
+-- 
+----------------------------------------------------------------------------------
+
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+-- Uncomment the following library declaration if using
+-- arithmetic functions with Signed or Unsigned values
+--use IEEE.NUMERIC_STD.ALL;
+
+-- Uncomment the following library declaration if instantiating
+-- any Xilinx leaf cells in this code.
+--library UNISIM;
+--use UNISIM.VComponents.all;
+
+entity Decoder is
+--  Port ( );
+    Port ( a : in STD_LOGIC;
+           b : in STD_LOGIC;
+           c : in STD_LOGIC;
+           d : in STD_LOGIC;
+           a1 : in STD_LOGIC;
+           b1 : in STD_LOGIC;
+           c1 : in STD_LOGIC;
+           d1 : in STD_LOGIC;
+           A2 : out STD_LOGIC;
+           B2 : out STD_LOGIC;
+           C2 : out STD_LOGIC;
+           D2 : out STD_LOGIC;
+           A0 : out STD_LOGIC;
+           B0 : out STD_LOGIC;
+           C0 : out STD_LOGIC;
+           D0 : out STD_LOGIC;
+           E0 : out STD_LOGIC;
+           F0 : out STD_LOGIC;
+           G0 : out STD_LOGIC);
+end Decoder;
+
+architecture Behavioral of Decoder is
+
+begin
+    A2 <= a1;
+    B2 <= b1;
+    C2 <= c1;
+    D2 <= d1;
+    A0 <= (b AND NOT c AND NOT d) OR (a AND b AND NOT c) OR (NOT a AND NOT b AND NOT c AND d) OR (a AND NOT b AND c AND d);
+    B0 <= (a AND b AND c) OR (b AND c AND NOT d) OR (a AND c AND d) OR (a AND b AND NOT c AND NOT d) OR (NOT a AND b AND NOT c AND d);
+    C0 <= (a AND b AND c) OR (NOT a AND NOT b AND c AND NOT d) OR (a AND b AND NOT d);
+    D0 <= (b AND c AND d) OR (a AND NOT b AND c AND NOT d) OR (NOT a AND NOT b AND NOT c AND d) OR (NOT a AND b AND NOT c AND NOT d);
+    E0 <= (NOT a AND d) OR (NOT a AND b AND NOT c) OR (NOT b AND NOT c AND d);
+    F0 <= (NOT a AND c AND d) OR (a AND b AND NOT c) OR (NOT a AND NOT b AND  c) OR (NOT a AND NOT b AND d);
+    G0 <= (NOT a AND NOT b AND NOT c) OR (NOT a AND b AND c AND d);
+
+end Behavioral;
