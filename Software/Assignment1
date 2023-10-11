@@ -1,0 +1,259 @@
+def gate_delays(gd_inp):
+
+    '''
+    Reads the gate_delays file passed as argument and returns a dictionary
+    which stores the delay of each gate.
+    Raises exception in the following cases:
+        1) Negative or non-float gate_delay
+        2) Wrong input format
+    '''
+
+    gate_delays = open(gd_inp,'r')
+    gd = gate_delays.readlines()
+    gd_dict = {}
+    for line in gd:
+        line = line.strip()
+        if line == '\n' or line == '':
+            continue
+        if line[:2]=='//':
+            continue
+        words = line.split()
+        try:
+            words[1] = float(words[1])
+        except:
+            raise Exception('Invalid gate delay!')
+        if (words[1]<0):
+            raise Exception('Negative gate delay!')
+        elif (len(words)>2):
+            raise Exception('Invalid format! {Gate_name} {Gate_Delay}')
+        else:
+            gd_dict[words[0]]=float(words[1])
+    gate_delays.close()
+    return gd_dict
+
+
+def required_delays(rd_inp):
+
+    '''
+    Reads the required_delays file passed as argument and returns a dictionary
+    which stores the required delay of each output.
+    Raises exception in the following cases:
+        1) Negative or non-float required delay
+        2) Wrong input format
+    '''
+
+    
+    required_delays = open(rd_inp,'r')
+    rd = required_delays.readlines()
+    rd_dict = {}
+    for line in rd:
+        line = line.strip()
+        if line == '\n' or line == '':
+            continue
+        if line[:2]=='//':
+            continue
+        words = line.split()
+        try:
+            words[1] = float(words[1])
+        except:
+            raise Exception('Invalid gate delay!')
+        if (words[1]<0):
+            raise Exception('Negative gate delay!')
+        elif (len(words)>2):
+            raise Exception('Invalid format! {Gate_name} {Gate_Delay}')
+        else:
+            rd_dict[words[0]]=float(words[1])
+    required_delays.close()
+    return rd_dict
+
+def circuit_read(c,gd_dict,mode):
+
+    '''
+    Takes as arguments the circuit file and the dictionary storing the gate delays.
+    Reads the cirucit file and stores PRIMARY_INPUTS, PRIMARY_OUTPUTS
+    Raises exception in the following cases:
+        1) Gate not declared in the gate delays file
+        2) Wrong input format
+        3) Primary inputs or primary outputs not declared before the circuit netlist
+    Creates the adjacency matrix for the given weighted DAG, with each signal being a vertex
+    and each node being an edge with its weigth equal to its delay.
+    Note that for part B our graph is created such that input signal is a successor
+    of the output signal, i.e. output signals are the source nodes.
+    For part A our graph is created such that output signal is a successor
+    of the input signal, i.e. input signals are the source nodes.
+    '''
+
+    graph = {}
+    circuit_file = open(c,'r')
+    circuit = circuit_file.readlines()
+    output_delays = {}
+    lineno = 0
+    signals = []
+    
+    for line in circuit:
+        line = line.strip()
+        if line == '\n' or line == '':
+            continue
+        if line[:2]=='//':
+            continue
+        lineno += 1
+        words = line.split()
+        
+        if lineno<=3:
+        
+            if (words[0]=="PRIMARY_INPUTS"):
+                PRIMARY_INPUTS = words[1:]
+                for i in PRIMARY_INPUTS:
+                    graph[i] = []
+                    signals.append(i)
+                continue
+            elif (words[0]=="PRIMARY_OUTPUTS"):
+                PRIMARY_OUTPUTS = words[1:]
+                for i in PRIMARY_OUTPUTS:
+                    graph[i] = []
+                    signals.append(i)
+                continue
+            elif (words[0]=="INTERNAL_SIGNALS"):
+                INTERNAL_SIGNALS = words[1:]
+                for i in INTERNAL_SIGNALS:
+                    graph[i] = []
+                    signals.append(i)
+                continue
+            elif (lineno == 3 and (words[0] in gd_dict)):
+                pass
+            else:
+                raise Exception("Invalid declaration of signals!")
+        
+        if mode=='B':
+            if words[0][-1] == '2' and (words[0] in gd_dict):
+                if (words[1] not in signals or words[2] not in signals or words[3] not in signals):
+                    raise Exception("Signal not declared!")
+                graph[words[3]].append([words[1],gd_dict[words[0]]])
+                graph[words[3]].append([words[2],gd_dict[words[0]]])
+            elif words[0] in gd_dict:
+                if (words[1] not in signals or words[2] not in signals):
+                    raise Exception("Signal not declared!")
+                graph[words[2]].append([words[1],gd_dict[words[0]]])
+            else:
+                raise Exception("Invalid gate!")
+
+        elif mode=='A':
+            if words[0][-1] == '2' and (words[0] in gd_dict):
+                if (words[1] not in signals or words[2] not in signals or words[3] not in signals):
+                    raise Exception("Signal not declared!")
+                graph[words[1]].append([words[3],gd_dict[words[0]]])
+                graph[words[2]].append([words[3],gd_dict[words[0]]])
+            elif words[0] in gd_dict:
+                if (words[1] not in signals or words[2] not in signals):
+                    raise Exception("Signal not declared!")
+                graph[words[1]].append([words[2],gd_dict[words[0]]])
+            else:
+                raise Exception("Invalid gate!")
+
+    try:
+        return [graph,PRIMARY_INPUTS,PRIMARY_OUTPUTS,signals]
+    except:
+        raise Exception("PRIMARY_INPUTS or PRIMARY_OUTPUTS not declared!")
+
+def TopSort(v,order,visited,graph):
+    visited[v] = 1
+    for i in graph[v]:
+        if (visited[i[0]]==0):
+            TopSort(i[0],order,visited,graph)
+        if (visited[i[0]]==1):
+            raise Exception("The circuit contains a cycle!")
+    order.append(v)
+    visited[v] = 2
+
+def longestPath_A(graph,PRIMARY_INPUTS,signals):
+    dist = {i:-1.0 for i in signals}
+    for i in PRIMARY_INPUTS:
+        dist[i] = 0.0
+    
+    visited={i:0 for i in signals}
+    order=[]
+    for v in PRIMARY_INPUTS:
+        TopSort(v,order,visited,graph)
+
+    while (len(order) > 0):
+        u = order.pop()
+
+        if (dist[u] != -1):
+            for i in graph[u]:
+                if (dist[i[0]] < dist[u] + i[1]):
+                    dist[i[0]] = dist[u] + i[1]
+        else:
+            raise Exception("Invalid circuit!")
+
+    return dist
+
+def longestPath_B(graph,rd_dict,PRIMARY_OUTPUTS,signals):
+    imax = 10000000000.0
+
+    dist = {i:imax for i in signals}
+    for i in PRIMARY_OUTPUTS:
+        dist[i] = rd_dict[i]
+
+    visited={i:0 for i in signals}
+    order=[]
+    for v in PRIMARY_OUTPUTS:
+        TopSort(v,order,visited,graph)
+
+    while (len(order) > 0):
+        u = order.pop()
+
+        if (dist[u] != imax):
+            for i in graph[u]:
+                if (dist[i[0]] > dist[u] - i[1]):
+                    dist[i[0]] = dist[u] - i[1]
+                if (dist[i[0]]<0):
+                    raise Exception("Output cannot be ready at the given time!")
+        else:
+            raise Exception("Invalid circuit!")
+
+    return dist
+
+def solve_A(c,gd):
+    gd_dict = gate_delays(gd)
+    [graph,PRIMARY_INPUTS,PRIMARY_OUTPUTS,signals] = circuit_read(c,gd_dict,'A')
+    output_delays = open('output_delays.txt','w')
+    ans = longestPath_A(graph,PRIMARY_INPUTS,signals)
+    l = []
+    for i in PRIMARY_OUTPUTS:
+        if (ans[i]<0):
+            raise Exception("Invalid circuit!")
+        if (ans[i].is_integer()):
+            ans[i] = int(ans[i])
+        l.append(i+' '+str(ans[i]) + '\n')
+    output_delays.writelines(l)
+    output_delays.close()
+
+def solve_B(c,gd,rd):
+    gd_dict = gate_delays(gd)
+    [graph,PRIMARY_INPUTS,PRIMARY_OUTPUTS,signals] = circuit_read(c,gd_dict,'B')
+    rd_dict = required_delays(rd)
+    input_delays = open('input_delays.txt','w')
+    ans = longestPath_B(graph,rd_dict,PRIMARY_OUTPUTS,signals)
+    l = []
+    for i in PRIMARY_INPUTS:
+        if (ans[i]<0):
+            raise Exception("Invalid circuit!")
+        if (ans[i].is_integer()):
+            ans[i] = int(ans[i])
+        l.append(i+' '+str(ans[i]) + '\n')
+    input_delays.writelines(l)
+    input_delays.close()
+
+import sys
+
+if __name__ == '__main__':
+    mode = sys.argv[1]
+    c = sys.argv[2]
+    gd = sys.argv[3]
+    rd = sys.argv[4]
+    if (mode=='A'):
+        solve_A(c,gd)
+    elif (mode=='B'):
+        solve_B(c,gd,rd)
+    else:
+        raise Exception("Invalid arguments!")
